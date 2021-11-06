@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+
+<meta charset="utf-8">
+<title>Monaco editor no loader</title>
+<link rel="stylesheet" data-name="vs/editor/editor.main"
+  href="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.29.1/min/vs/editor/editor.main.min.css">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/pyodide/v0.18.1/full/pyodide.js"></script>
+<script>
+  var require = {
+    paths: {
+      'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.29.1/min/vs'
+    }
+  }
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.29.1/min/vs/loader.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.29.1/min/vs/editor/editor.main.nls.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.29.1/min/vs/editor/editor.main.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.29.1/min/vs/basic-languages/python/python.js">
+</script>
+
+<body>
+  <div id="container" style="height:400px;border:1px solid black;"></div>
+  <button id="run"> run </button>
+  <div>Output:</div>
+  <textarea id="output" style="width: 100%;" rows="6" disabled></textarea>
+  <div id="code-error"></div>
+
+
+  <script>
+    const output = document.getElementById("output");
+    const code_error_elem = document.getElementById("code-error");
+    var run_code = null
+
+
+    $(()=>output.value = "Initializing...\n")
+
+    // init Pyodide
+    function add_to_output(text) {
+      output.value += text
+    }
+    async function load_pyodide() {
+
+      let pyodide = await loadPyodide({
+        indexURL: "https://cdn.jsdelivr.net/pyodide/v0.18.1/full/",
+        stdin: window.prompt,
+        stdout: add_to_output,
+        stderr: add_to_output
+      });
+      output.value = "Load Packages ...";
+      ////////////////////
+      await pyodide.loadPackage("micropip").then(async function () {
+        await pyodide.runPythonAsync(`
+        import micropip
+        await micropip.install("rich friendly-traceback markdown hebrew-python".split(' '))
+      `);
+
+      })
+      //////////////
+    fetch(window.location.origin + "/core.py").then(response => response.text()).then(async function (data) {
+      output.value = "Load Core ...";
+      await pyodide.runPythonAsync(data)
+
+      run_code = pyodide.globals.get("run_code")
+
+      output.value = "Ready!";
+    }).catch(console.error)
+      //////////////
+      return pyodide;
+
+    }
+
+    let pyodideReadyPromise = load_pyodide();
+
+    async function run(code) {
+      output.value = ''
+      let hebrew_mode = ('hebrew_mode' in params)?params["hebrew_mode"]:false
+      let pyodide = await pyodideReadyPromise;
+      try {
+        //let output_string = pyodide.runPythonAsync(code);
+        var output_map = run_code(code,hebrew_mode).toJs();
+
+        if (output_map.size) {
+          output_map = output_map
+
+          code_error_elem.innerHTML = output_map.get("error")
+        }
+        else{        
+          code_error_elem.innerHTML = "" // clear error
+        }
+
+      } catch (err) {
+        output.value += err;
+      }
+    }
+    const params = Object.fromEntries(new URLSearchParams(window.location.search).entries())
+    let code_string = ('code' in params)?params["code"]:'def main():\n\tprint("Hello world!")\nmain()'
+    
+    // if ("hebrew_mode" in params) // TODO
+
+
+    const editor = monaco.editor.create(document.getElementById('container'), {
+      value: code_string,
+      language: 'python',
+      theme: 'vs-dark',
+      readOnly: false,
+    });
+
+
+    document.getElementById("run").onclick = () => {
+      run(editor.getValue())
+    }
+  </script>
+
+</body>
+
+</html>
