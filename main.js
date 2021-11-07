@@ -67,7 +67,7 @@ const output = document.getElementById("output");
     let code_string = ('code' in params) ? params["code"] : 'def main():\n\tprint("Hello world!")\nmain()'
 
 
-    function main() {
+    export function main() {
       const editor = monaco.editor.create(document.getElementById('container'), {
         value: code_string,
         language: 'python',
@@ -81,4 +81,3 @@ const output = document.getElementById("output");
       }
     }
     //$(main)
-module.exports = main
