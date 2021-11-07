@@ -58,7 +58,7 @@
 
       })
       //////////////
-    fetch(window.location.origin + "/core.py").then(response => response.text()).then(async function (data) {
+    fetch("https://raw.githubusercontent.com/matan-h/python-html-code-editor/main" + "/core.py").then(response => response.text()).then(async function (data) {
       output.value = "Load Core ...";
       await pyodide.runPythonAsync(data)
 
