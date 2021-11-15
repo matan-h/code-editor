@@ -1,5 +1,3 @@
-import builtins
-import functools
 import inspect
 import io
 
@@ -7,12 +5,17 @@ import friendly_traceback.core
 import rich.console
 import rich.traceback
 import markdown
-
+from contextlib import redirect_stderr, redirect_stdout
 from io import StringIO
-import os, sys
-import hebrew_python
+import os
+import sys
+try:
+    import hebrew_python
+except ImportError:
+    hebrew_python = None
 
-console = rich.console.Console(color_system="truecolor", force_terminal=True, record=True, file=StringIO())
+console = rich.console.Console(
+    color_system="truecolor", force_terminal=True, record=True, file=StringIO())
 
 
 globals_exec = {
@@ -22,7 +25,7 @@ globals_exec = {
 }
 
 
-def run_code(code,hebrew_mode=False):
+def run_code(code, hebrew_mode=False):
     if hebrew_mode:
         if not hebrew_python.hook.hebrew_builtins:
             hebrew_python.hook.setup()
@@ -34,7 +37,6 @@ def run_code(code,hebrew_mode=False):
         if hebrew_mode:
             code = hebrew_python.hook.transform_source(code)
         c = compile(code, "program.py", "exec")
-        all_builtins = None
 
         if hebrew_mode:
             # builtins.__dict__.update(hebrew_python.hook.hebrew_builtins)
@@ -48,7 +50,8 @@ def run_code(code,hebrew_mode=False):
     except (Exception, SystemExit, SyntaxError):
         exc_type, exc_value, tb = sys.exc_info()
 
-        tb = rich.traceback.Traceback.from_exception(exc_type, exc_value, tb, show_locals=True)
+        tb = rich.traceback.Traceback.from_exception(
+            exc_type, exc_value, tb, show_locals=True)
         # tb.suppress = ["<exec>"]  # FIXME : this not work
         tb.trace.stacks[0].frames.pop(0)
 
@@ -67,7 +70,8 @@ def run_code(code,hebrew_mode=False):
 
         text = f'{generic}\n{suggest}\n{cause}'
         html = markdown.markdown(text)
-        ret = {"error": console.export_html() + "\n\n" + html, "shell": inspect.stack()}
+        ret = {"error": console.export_html() + "\n\n" + html,
+               "shell": inspect.stack()}
         return ret
 
 
